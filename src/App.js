@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react' 
 import { Line } from 'react-chartjs-2'
 import dataService from './services/data'
-import { findFirstDataEntry } from './tools/sensorDataTools' 
+import { findFirstDataEntry, convertSensorDataToChartFormat } from './tools/sensorDataTools' 
 
 const MAX_DAYS_TO_DISPLAY = 31
 
@@ -14,39 +14,7 @@ const ConstructChart = ({ dateFrom, dateTo, sensorData }) => {
   
   if (Boolean(+from) && Boolean(+to) && from <= to) {
     if (to.getTime() - from.getTime() < 86400000 * MAX_DAYS_TO_DISPLAY + 3600000) { // Allow one extra hour due to the rounding
-      const i = new Date(from)
-      let labels = []
-      let sensorTableData = []
-      let amountOfColumns=0
-      while (i <= to) {
-        labels.push(i.toISOString())
-        let row = {...sensorData.filter(n => n.id === i.toISOString())[0]}
-        // Actual data transformation from JSON to table
-        if (row !== undefined) { // Found data. Process it.
-          delete row["id"]
-          for (const [key, value] of Object.entries(sensorTableData)) { // Find and add all sensors which already have data in table.
-            if (row[key] !== undefined) {
-              value.push(row[key])
-            } else {
-              value.push(undefined)
-            }
-            delete row[key]
-          }
-          for (const [key, value] of Object.entries(row)) { // In case new sensors have appeared, they are being included as well.
-            sensorTableData[key] = []
-            for (let j=0; j<amountOfColumns; j++) {
-              sensorTableData[key].push(undefined)
-            }
-            sensorTableData[key].push(value)
-          }
-        } else { // Missing data for some reason. Process missing data.
-          for (const [key] of Object.entries(sensorTableData)) {
-            sensorTableData[key].push(undefined)
-          }
-        }
-        amountOfColumns++
-        i.setHours(i.getHours()+1)
-      }
+      const {labels, sensorTableData} = convertSensorDataToChartFormat(from, to, sensorData)
       return (
         <>
           <h3>{`${from} - ${to}`}</h3>
